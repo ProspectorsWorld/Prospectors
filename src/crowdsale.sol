@@ -95,7 +95,6 @@ contract ProspectorsCrowdsale is Owned, DSMath
 
         var remains = msg.value;
         
-        
          //calculate tokens amount by bonus price
         var can_with_bonus = wdiv(cast(remains), cast(bonus_price));
         var buy_amount = cast(min(can_with_bonus, available_with_bonus()));
@@ -112,8 +111,6 @@ contract ProspectorsCrowdsale is Owned, DSMath
         uint user_raised = msg.value - remains; 
         total_raised += user_raised;
         funders[msg.sender].amount += user_raised;
-        
-        
         
         if (remains > 0) //save superfluous balance to refund by user if tokens left are less then eth amount
         {
