@@ -8,7 +8,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
 {
     uint public start_time;
     uint public end_time;
-    TokenTest public token;
+    ProspectorsGoldToken public token;
     
     uint public bonus_amount;
     uint public start_amount;
@@ -52,7 +52,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
 
     function ProspectorsCrowdsale(address _owner)
     {
-        token = TokenTest(msg.sender);
+        token = ProspectorsGoldToken(msg.sender);
         owner = _owner;
     }
 
