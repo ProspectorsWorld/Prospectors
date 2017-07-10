@@ -1,3 +1,9 @@
+pragma solidity ^0.4.12;
+
+import "lib/token.sol";
+import "lib/owned.sol";
+import "lib/math.sol";
+
 contract ProspectorsCrowdsale is Owned, DSMath
 {
     uint public start_time;
