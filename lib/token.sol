@@ -1,6 +1,7 @@
 pragma solidity ^0.4.12;
 
-import "lib/math.sol";
+import "math.sol";
+import "owned.sol";
 
 contract ERC20 {
     function totalSupply() constant returns (uint supply);
@@ -61,5 +62,39 @@ contract TokenBase is ERC20, DSMath {
         
         return true;
     }
-
 }
+
+contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
+    string public constant name = "ProspectorsGoldToken";
+    string public constant symbol = "PGT";
+    uint8 public constant decimals = 18;  // 18 decimal places, the same as ETH.
+
+    uint public constant game_allocation = 11000000 ether;
+    uint public dev_allocation = 50000000 ether;
+    uint public crowdfunding_allocation = 50000 ether;
+    uint public bounty_allocation = 500000 ether;
+    
+    
+    BountyProgram public bounty;
+    ProspectorsCrowdsale public crowdsale;
+    
+    function ProspectorsGoldToken() {
+        _supply = 220000000 ether; 
+    }
+    
+    function init_crowdsale() onlyOwner
+    {
+        if (address(0) != address(crowdsale)) revert();
+        crowdsale = new ProspectorsCrowdsale(owner);
+        _balances[crowdsale] = crowdfunding_allocation;
+        crowdsale.init(5000 ether, 0.001 ether, 0.0005 ether, block.timestamp, block.timestamp + 5 minutes);
+    }
+    
+    function init_bounty_program(BountyProgram _bounty) onlyOwner
+    {
+        if (address(0) != address(bounty)) revert();
+        bounty = _bounty;
+        _balances[bounty] = bounty_allocation;
+    }
+}
+
