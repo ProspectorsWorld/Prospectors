@@ -6,18 +6,18 @@ import "lib/math.sol";
 
 contract ProspectorsCrowdsale is Owned, DSMath
 {
-    uint public start_time;
-    uint public end_time;
     ProspectorsGoldToken public token;
     
+    uint public start_time;
+    uint public end_time;
     uint public bonus_amount;
     uint public start_amount;
     uint public price;
     uint public bonus_price;
+    uint public total_raised;
     
-    uint private total_raised;
     uint private to_return;
-    uint private constant goal = 2 ether;
+    uint private constant goal = 40 ether;
     bool private closed = false;
     
     mapping(address => Funder) funders;
@@ -27,10 +27,38 @@ contract ProspectorsCrowdsale is Owned, DSMath
         if (time() < start_time || time() > end_time)  revert();
         _;
     }
-    
-    function total() public constant returns (uint)
+
+    function is_success() public constant returns (bool)
     {
-        return total_raised / 1 ether;
+        return closed == true && total_raised >= goal;
+    }
+    
+    function time() public constant returns (uint)
+    {
+        return block.timestamp;
+    }
+    
+    function my_token_balance() public constant returns (uint)
+    {
+        return token.balanceOf(this);
+    }
+    
+    function available_with_bonus() public constant returns (uint)
+    {
+        return my_token_balance() >=  min_balance_for_bonus() ? 
+                my_token_balance() - min_balance_for_bonus() 
+                : 
+                0;
+    }
+    
+    function available_without_bonus() private constant returns (uint)
+    {
+        return min(my_token_balance(),  min_balance_for_bonus());
+    }
+    
+    function min_balance_for_bonus() private constant returns (uint)
+    {
+        return start_amount - bonus_amount;
     }
     
     modifier has_value
@@ -43,11 +71,6 @@ contract ProspectorsCrowdsale is Owned, DSMath
     {
         uint amount;
         uint over_amount;
-    }
-    
-    function time() public constant returns (uint)
-    {
-        return block.timestamp;
     }
 
     function ProspectorsCrowdsale(address _owner)
@@ -67,29 +90,6 @@ contract ProspectorsCrowdsale is Owned, DSMath
         start_amount = my_token_balance(); 
     }
     
-    function my_token_balance() constant returns (uint)
-    {
-        return token.balanceOf(this);
-    }
-    
-    function available_with_bonus() constant returns (uint)
-    {
-        return my_token_balance() >=  min_balance_for_bonus() ? 
-                my_token_balance() - min_balance_for_bonus() 
-                : 
-                0;
-    }
-    
-    function available_without_bonus() private constant returns (uint)
-    {
-        return min(my_token_balance(),  min_balance_for_bonus());
-    }
-    
-    function min_balance_for_bonus() private constant returns (uint)
-    {
-        return start_amount - bonus_amount;
-    }
-    
     function buy() in_time has_value private {
         if (my_token_balance() == 0 || closed == true) revert();
 
@@ -98,19 +98,19 @@ contract ProspectorsCrowdsale is Owned, DSMath
          //calculate tokens amount by bonus price
         var can_with_bonus = wdiv(cast(remains), cast(bonus_price));
         var buy_amount = cast(min(can_with_bonus, available_with_bonus()));
-        remains -= wmul(buy_amount, cast(bonus_price));
+        remains = sub(remains, wmul(buy_amount, cast(bonus_price)));
         
         if (buy_amount < can_with_bonus) //calculate tokens amount by standart price if tokens with bonus don't cover eth amount
         {
             var can_without_bonus = wdiv(cast(remains), cast(price));
             var buy_without_bonus = cast(min(can_without_bonus, available_without_bonus()));
-            remains -= wmul(buy_without_bonus, cast(price));
-            buy_amount += buy_without_bonus;
+            remains = sub(remains, wmul(buy_without_bonus, cast(price)));
+            buy_amount = hadd(buy_amount, buy_without_bonus);
         }
         
-        uint user_raised = msg.value - remains; 
-        total_raised += user_raised;
-        funders[msg.sender].amount += user_raised;
+        uint user_raised = sub(msg.value, remains); 
+        total_raised = add(total_raised, user_raised);
+        funders[msg.sender].amount = add(funders[msg.sender].amount, user_raised);
         
         if (remains > 0) //save superfluous balance to refund by user if tokens left are less then eth amount
         {
@@ -144,11 +144,12 @@ contract ProspectorsCrowdsale is Owned, DSMath
         }
     }
     
-    function closeCrowdsale() //unlock refunds
+    function closeCrowdsale() //close crowdsale. this action unlocks refunds or token transfers
     {
         if (closed == false && time() > start_time && (time() > end_time || my_token_balance() == 0))
         {
             closed = true;
+            token.unlock(); //unlock token transfers
         }
         else
         {
@@ -174,4 +175,11 @@ contract ProspectorsCrowdsale is Owned, DSMath
             selfdestruct(owner);
         }
     }
+
+    //this code will be excluded from mainnet, using only in testnet
+    function kill() onlyOwner
+    {
+        selfdestruct(owner);
+    }
 }
+
