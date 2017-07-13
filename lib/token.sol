@@ -71,23 +71,22 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     string public constant symbol = "TKT";
     uint8 public constant decimals = 18;  // 18 decimal places, the same as ETH.
 
-    // Base allocation of tokens owned by game. Not saled tokens will be moved to game balance.
-    uint public constant game_allocation = 110000000 * WAD;
-    // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
-    address private game_address = 0xb1;
+    address private game_address = 0xb1; // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
+    uint public constant game_allocation = 110000000 * WAD; // Base allocation of tokens owned by game. Not saled tokens will be moved to game balance.
+    uint public constant dev_allocation = 50000000 * WAD; //tokens allocated to prospectors team and developers
+    uint public constant crowdfunding_allocation = 59500000 * WAD; //tokens allocated to crowdsale
+    uint public constant bounty_allocation = 500000 * WAD; //tokens allocated to bounty program
 
-    uint public constant dev_allocation = 50000000 * WAD;
-    uint public constant crowdfunding_allocation = 59500000 * WAD;
-    uint public constant bounty_allocation = 500000 * WAD;
-    bool private locked = true;
-    
-    BountyProgram public bounty;
-    ProspectorsCrowdsale public crowdsale;
-    ProspectorsDevAllocation public prospectors_dev_allocation;
+    bool public locked = true; //token non transfarable yet. it can be unlocked after success crowdsale
+
+    BountyProgram public bounty; //bounty tokens manager contract address
+    ProspectorsCrowdsale public crowdsale; //crowdsale contract address
+    ProspectorsDevAllocation public prospectors_dev_allocation; //prospectors team and developers tokens holder. Contract allows to get tokens in two periods (180 and 360 days)
 
     function ProspectorsGoldToken() {
-        _supply = 220000000 * WAD; 
-        _balances[game_address] = game_allocation;
+        _supply = 220000000 * WAD;
+        _balances[this] = _supply;
+        mint_for(game_address, game_allocation);
     }
     
     //override and prevent transfer if crowdsale fails
@@ -118,7 +117,7 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     {
         if (address(0) != address(crowdsale)) revert();
         crowdsale = new ProspectorsCrowdsale(owner, _dev_multisig, game_address);
-        _balances[crowdsale] = crowdfunding_allocation;
+        mint_for(crowdsale, crowdfunding_allocation);
         crowdsale.init(9500000 * WAD, _standart_price, _bonus_price, _start_time, _end_time);
     }
     
@@ -127,7 +126,7 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     {
         if (address(0) != address(bounty) || locked == true) revert();
         bounty = _bounty;
-        _balances[bounty] = bounty_allocation;
+        mint_for(bounty, bounty_allocation);
     }
     
     //create contract for holding dev tokens and mint tokens for it. Allowed only if crowdsale success
@@ -135,7 +134,7 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     {
         if (address(0) != address(prospectors_dev_allocation) || locked == true) revert();
         prospectors_dev_allocation = new ProspectorsDevAllocation(owner);
-        _balances[prospectors_dev_allocation] = dev_allocation;
+        mint_for(prospectors_dev_allocation, dev_allocation);
     }
     
     //this function will be called after game release
@@ -149,5 +148,16 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     function kill() onlyOwner
     {
         selfdestruct(owner);
+    }
+    
+    //adding tokens to crowdsale, bounty, game and prospectors team
+    function mint_for(address addr, uint amount) private
+    {
+        if (_balances[this] >= amount)
+        {
+            _balances[this] = sub(_balances[this], amount);
+            _balances[addr] = add(_balances[addr], amount);
+            Transfer(this, addr, amount);
+        }
     }
 }
