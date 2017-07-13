@@ -146,12 +146,6 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
         _balances[game_address] = 0;
     }
     
-    //this code will be excluded from main net, using only in testnet
-    function kill() onlyOwner
-    {
-        selfdestruct(owner);
-    }
-    
     //adding tokens to crowdsale, bounty, game and prospectors team
     function mint_for(address addr, uint amount) private
     {
@@ -161,5 +155,11 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
             _balances[addr] = add(_balances[addr], amount);
             Transfer(this, addr, amount);
         }
+    }
+    
+    //this code will be excluded from main net, using only in testnet
+    function kill() onlyOwner
+    {
+        selfdestruct(owner);
     }
 }
