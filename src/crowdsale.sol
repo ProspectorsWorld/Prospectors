@@ -15,10 +15,10 @@ contract ProspectorsCrowdsale is Owned, DSMath
     uint public price;
     uint public bonus_price;
     uint public total_raised;
+    address public dev_multisig;
     
     uint private constant goal = 2000 ether;
     bool private closed = false;
-    
     address private address_for_not_saled_tokens;
     
     mapping(address => uint) funded;
@@ -68,11 +68,12 @@ contract ProspectorsCrowdsale is Owned, DSMath
         _;
     }
 
-    function ProspectorsCrowdsale(address _owner, address _address_for_not_saled_tokens)
+    function ProspectorsCrowdsale(address _owner, address _dev_multisig, address _address_for_not_saled_tokens)
     {
         token = ProspectorsGoldToken(msg.sender);
         address_for_not_saled_tokens = _address_for_not_saled_tokens;
         owner = _owner;
+        dev_multisig = _dev_multisig;
     }
 
     function init(uint256 _bonus_amount, uint256 _price, uint256 _bonus_price, uint _start_time, uint _end_time)
@@ -146,7 +147,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
     function collect() //collect eth by devs if min goal reached
     {
         if (total_raised < goal) revert();
-        owner.transfer(this.balance);
+        dev_multisig.transfer(this.balance);
     }
 
     function () payable external {
@@ -157,13 +158,13 @@ contract ProspectorsCrowdsale is Owned, DSMath
     {
         if (time() > end_time + 180 days)
         {
-            selfdestruct(owner);
+            selfdestruct(dev_multisig);
         }
     }
 
     //this code will be excluded from mainnet, using only in testnet
     function kill() onlyOwner
     {
-        selfdestruct(owner);
+        selfdestruct(dev_multisig);
     }
 }
