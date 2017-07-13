@@ -8,22 +8,22 @@ contract ProspectorsCrowdsale is Owned, DSMath
 {
     ProspectorsGoldToken public token;
     
-    uint public start_time;
-    uint public end_time;
-    uint public bonus_amount;
-    uint public start_amount;
-    uint public price;
-    uint public bonus_price;
-    uint public total_raised;
-    address public dev_multisig;
+    uint public start_time; //crowdsale start time
+    uint public end_time; //crowdsale end time
+    uint public bonus_amount; //amount of tokens by bonus price
+    uint public start_amount; //tokens amount allocated for crowdsale
+    uint public price; //standart token price in ETH 
+    uint public bonus_price; //bonus token price in ETH
+    uint public total_raised; //crowdsale total funds raised
+    address public dev_multisig; //multisignature wallet to collect funds
     
-    uint private constant goal = 2000 ether;
-    bool private closed = false;
-    address private address_for_not_saled_tokens;
+    uint private constant goal = 2000 ether; //soft crowdsale cap. If not reached funds will be returned
+    bool private closed = false; //can be true after end_time or when all tokens sold
+    address private address_for_not_saled_tokens; //this is non transfarable game address, all not sold tokens will be sent to it
     
-    mapping(address => uint) funded;
+    mapping(address => uint) funded; //needed to save amounts of ETH for refund
     
-    modifier in_time
+    modifier in_time //allows send eth only when crowdsale is active
     {
         if (time() < start_time || time() > end_time)  revert();
         _;
@@ -44,6 +44,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
         return token.balanceOf(this);
     }
     
+    //tokens amount available by bonus price
     function available_with_bonus() public constant returns (uint)
     {
         return my_token_balance() >=  min_balance_for_bonus() ? 
@@ -62,6 +63,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
         return start_amount - bonus_amount;
     }
     
+    //prevent send 0 ETH
     modifier has_value
     {
         if (msg.value <= 0) revert();
@@ -87,6 +89,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
         start_amount = my_token_balance(); 
     }
     
+    //main contribute function
     function buy() in_time has_value private {
         if (my_token_balance() == 0 || closed == true) revert();
 
@@ -154,6 +157,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
         buy();
     }
     
+    //allows destroy this whithin 180 days after crowdsale ends
     function destroy() onlyOwner
     {
         if (time() > end_time + 180 days)
