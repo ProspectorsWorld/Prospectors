@@ -67,8 +67,8 @@ contract TokenBase is ERC20, DSMath {
 }
 
 contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
-    string public constant name = "TokenTest";
-    string public constant symbol = "TKT";
+    string public constant name = "Prospectors Gold";
+    string public constant symbol = "PGL";
     uint8 public constant decimals = 18;  // 18 decimal places, the same as ETH.
 
     address private game_address = 0xb1; // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
