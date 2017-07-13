@@ -147,7 +147,6 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     function kill() onlyOwner
     {
         selfdestruct(owner);
-        crowdsale.kill();
     }
 }
 
