@@ -65,36 +65,90 @@ contract TokenBase is ERC20, DSMath {
 }
 
 contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
-    string public constant name = "ProspectorsGoldToken";
-    string public constant symbol = "PGT";
+    string public constant name = "TokenTest";
+    string public constant symbol = "TKT";
     uint8 public constant decimals = 18;  // 18 decimal places, the same as ETH.
 
-    uint public constant game_allocation = 11000000 ether;
-    uint public dev_allocation = 50000000 ether;
-    uint public crowdfunding_allocation = 50000 ether;
-    uint public bounty_allocation = 500000 ether;
-    
+    // Base allocation of tokens owned by game. Not saled tokens will be moved to game balance.
+    uint public constant game_allocation = 110000000 * WAD;
+    // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
+    address private game_address = 0xb1;
+
+    uint public constant dev_allocation = 50000000 * WAD;
+    uint public constant crowdfunding_allocation = 59500000 * WAD;
+    uint public constant bounty_allocation = 500000 * WAD;
+    bool private locked = true;
     
     BountyProgram public bounty;
     ProspectorsCrowdsale public crowdsale;
-    
+    ProspectorsDevAllocation public prospectors_dev_allocation;
+
     function ProspectorsGoldToken() {
-        _supply = 220000000 ether; 
+        _supply = 220000000 * WAD; 
+        _balances[game_address] = game_allocation;
     }
     
-    function init_crowdsale() onlyOwner
+    //override and prevent transfer if crowdsale fails
+    function transfer(address to, uint value) returns (bool)
+    {
+        if (locked == true && msg.sender != address(crowdsale)) revert();
+        return super.transfer(to, value);
+    }
+    
+    //override and prevent transfer if crowdsale fails
+    function transferFrom(address from, address to, uint value)  returns (bool)
+    {
+        if (locked == true) revert();
+        return super.transferFrom(from, to, value);
+    }
+    
+    //unlock transfers if crowdsale success
+    function unlock()
+    {
+        if (locked == true && crowdsale.is_success() == true)
+        {
+            locked = false;
+        }
+    }
+
+    //create crowdsale contract and mint tokens for it
+    function init_crowdsale(uint _tokens_with_bonus, uint _standart_price, uint _bonus_price, uint _start_time, uint _end_time) onlyOwner
     {
         if (address(0) != address(crowdsale)) revert();
-        crowdsale = new ProspectorsCrowdsale(owner);
+        crowdsale = new ProspectorsCrowdsale(owner, game_address);
         _balances[crowdsale] = crowdfunding_allocation;
-        crowdsale.init(5000 ether, 0.001 ether, 0.0005 ether, block.timestamp, block.timestamp + 5 minutes);
+        crowdsale.init(_tokens_with_bonus, _standart_price, _bonus_price, _start_time, _end_time);
     }
     
+    //create bounty manager contract and mint tokens for it. Allowed only if crowdsale success
     function init_bounty_program(BountyProgram _bounty) onlyOwner
     {
-        if (address(0) != address(bounty)) revert();
+        if (address(0) != address(bounty) || locked == true) revert();
         bounty = _bounty;
         _balances[bounty] = bounty_allocation;
     }
+    
+    //create contract for holding dev tokens and mint tokens for it. Allowed only if crowdsale success
+    function init_dev_allocation() onlyOwner
+    {
+        if (address(0) != address(prospectors_dev_allocation) || locked == true) revert();
+        prospectors_dev_allocation = new ProspectorsDevAllocation(owner);
+        _balances[prospectors_dev_allocation] = dev_allocation;
+    }
+    
+    //this function will be called after game release
+    function clear_game_balance() onlyOwner
+    {
+        _supply = sub(_supply, _balances[game_address]);
+        _balances[game_address] = 0;
+    }
+    
+    //this code will be excluded from main net, using only in testnet
+    function kill() onlyOwner
+    {
+        selfdestruct(owner);
+        crowdsale.kill();
+    }
 }
+
 
