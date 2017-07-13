@@ -64,7 +64,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
     
     modifier has_value
     {
-        if (msg.sender <= 0) revert();
+        if (msg.value <= 0) revert();
         _;
     }
 
@@ -75,9 +75,9 @@ contract ProspectorsCrowdsale is Owned, DSMath
         owner = _owner;
     }
 
-    function init(uint _bonus_amount, uint _price, uint _bonus_price, uint _start_time, uint _end_time)
+    function init(uint256 _bonus_amount, uint256 _price, uint256 _bonus_price, uint _start_time, uint _end_time)
     {
-        if (_start_time < time() || _bonus_amount > my_token_balance()) revert();
+        if (msg.sender != address(token) || _start_time < time() || _bonus_amount > my_token_balance()) revert();
         bonus_amount = _bonus_amount;
         bonus_price = _bonus_price;
         price = _price;
