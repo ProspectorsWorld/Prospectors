@@ -72,10 +72,11 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     uint8 public constant decimals = 18;  // 18 decimal places, the same as ETH.
 
     address private game_address = 0xb1; // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
-    uint public constant game_allocation = 110000000 * WAD; // Base allocation of tokens owned by game. Not saled tokens will be moved to game balance.
-    uint public constant dev_allocation = 50000000 * WAD; //tokens allocated to prospectors team and developers
-    uint public constant crowdfunding_allocation = 59500000 * WAD; //tokens allocated to crowdsale
-    uint public constant bounty_allocation = 500000 * WAD; //tokens allocated to bounty program
+    uint public constant game_allocation = 110000000 * WAD; // Base allocation of tokens owned by game (50%). Not saled tokens will be moved to game balance.
+    uint public constant dev_allocation = 47500000 * WAD; //tokens allocated to prospectors team and developers (~21.6%)
+    uint public constant crowdfunding_allocation = 60000000 * WAD; //tokens allocated to crowdsale (~27.2%)
+    uint public constant bounty_allocation = 500000 * WAD; //tokens allocated to bounty program (~0.2%)
+    uint public constant presale_allocation = 2000000 * WAD; //tokens allocated to very early investors (~0.9%)
 
     bool public locked = true; //token non transfarable yet. it can be unlocked after success crowdsale
 
@@ -118,7 +119,7 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
         if (address(0) != address(crowdsale)) revert();
         crowdsale = new ProspectorsCrowdsale(owner, _dev_multisig, game_address);
         mint_for(crowdsale, crowdfunding_allocation);
-        crowdsale.init(9500000 * WAD, _standart_price, _bonus_price, _start_time, _end_time);
+        crowdsale.init(10000000 * WAD, _standart_price, _bonus_price, _start_time, _end_time);
     }
     
     //create bounty manager contract and mint tokens for it. Allowed only if crowdsale success
@@ -129,12 +130,13 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
         mint_for(bounty, bounty_allocation);
     }
     
-    //create contract for holding dev tokens and mint tokens for it. Allowed only if crowdsale success
-    function init_dev_allocation() onlyOwner
+    //create contract for holding dev tokens and mint tokens for it. Also mint tokens for very early investors. Allowed only if crowdsale success
+    function init_dev_and_presale_allocation(address presale_token_address) onlyOwner
     {
         if (address(0) != address(prospectors_dev_allocation) || locked == true) revert();
         prospectors_dev_allocation = new ProspectorsDevAllocation(owner);
         mint_for(prospectors_dev_allocation, dev_allocation);
+        mint_for(presale_token_address, presale_allocation);
     }
     
     //this function will be called after game release
