@@ -114,12 +114,12 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     }
 
     //create crowdsale contract and mint tokens for it
-    function init_crowdsale(uint _tokens_with_bonus, uint _standart_price, uint _bonus_price, uint _start_time, uint _end_time) onlyOwner
+    function init_crowdsale(uint _standart_price, uint _bonus_price, uint _start_time, uint _end_time, address _dev_multisig) onlyOwner
     {
         if (address(0) != address(crowdsale)) revert();
-        crowdsale = new ProspectorsCrowdsale(owner, game_address);
+        crowdsale = new ProspectorsCrowdsale(owner, _dev_multisig, game_address);
         _balances[crowdsale] = crowdfunding_allocation;
-        crowdsale.init(_tokens_with_bonus, _standart_price, _bonus_price, _start_time, _end_time);
+        crowdsale.init(9500000 * WAD, _standart_price, _bonus_price, _start_time, _end_time);
     }
     
     //create bounty manager contract and mint tokens for it. Allowed only if crowdsale success
@@ -151,5 +151,3 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
         selfdestruct(owner);
     }
 }
-
-
