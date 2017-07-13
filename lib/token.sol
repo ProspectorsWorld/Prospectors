@@ -2,6 +2,7 @@ pragma solidity ^0.4.12;
 
 import "math.sol";
 import "owned.sol";
+import "migrable.sol";
 import "src/dev_allocation.sol";
 
 contract ERC20 {
