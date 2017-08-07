@@ -73,16 +73,16 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
 
     address private game_address = 0xb1; // Address 0xb1 is provably non-transferrable. Game tokens will be moved to game platform after developing
     uint public constant game_allocation = 110000000 * WAD; // Base allocation of tokens owned by game (50%). Not saled tokens will be moved to game balance.
-    uint public constant dev_allocation = 47500000 * WAD; //tokens allocated to prospectors team and developers (~21.6%)
+    uint public constant dev_allocation = 45000000 * WAD; //tokens allocated to prospectors team and developers (~20.5%)
     uint public constant crowdfunding_allocation = 60000000 * WAD; //tokens allocated to crowdsale (~27.2%)
     uint public constant bounty_allocation = 500000 * WAD; //tokens allocated to bounty program (~0.2%)
-    uint public constant presale_allocation = 2000000 * WAD; //tokens allocated to very early investors (~0.9%)
+    uint public constant presale_allocation = 4500000 * WAD; //tokens allocated to very early investors (~2%)
 
     bool public locked = true; //token non transfarable yet. it can be unlocked after success crowdsale
 
-    BountyProgram public bounty; //bounty tokens manager contract address
+    address public bounty; //bounty tokens manager contract address
+    address public prospectors_dev_allocation; //prospectors team and developers tokens holder. Contract allows to get tokens in 5 periods (180, 360 days, 1, 2, 3 and 4 years)
     ProspectorsCrowdsale public crowdsale; //crowdsale contract address
-    ProspectorsDevAllocation public prospectors_dev_allocation; //prospectors team and developers tokens holder. Contract allows to get tokens in two periods (180 and 360 days)
 
     function ProspectorsGoldToken() {
         _supply = 220000000 * WAD;
@@ -105,36 +105,40 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     }
     
     //unlock transfers if crowdsale success
-    function unlock()
+    function unlock() returns (bool)
     {
         if (locked == true && crowdsale.is_success() == true)
         {
             locked = false;
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
-    //create crowdsale contract and mint tokens for it
-    function init_crowdsale(uint _standart_price, uint _bonus_price, uint _start_time, uint _end_time, address _dev_multisig) onlyOwner
+    //mint tokens for crowdsale
+    function init_crowdsale(address _crowdsale) onlyOwner
     {
         if (address(0) != address(crowdsale)) revert();
-        crowdsale = new ProspectorsCrowdsale(owner, _dev_multisig, game_address);
+        crowdsale = ProspectorsCrowdsale(_crowdsale);
         mint_for(crowdsale, crowdfunding_allocation);
-        crowdsale.init(10000000 * WAD, _standart_price, _bonus_price, _start_time, _end_time);
     }
     
-    //create bounty manager contract and mint tokens for it. Allowed only if crowdsale success
-    function init_bounty_program(BountyProgram _bounty) onlyOwner
+    //mint tokens for bounty contract.
+    function init_bounty_program(address _bounty) onlyOwner
     {
-        if (address(0) != address(bounty) || locked == true) revert();
+        if (address(0) != address(bounty)) revert();
         bounty = _bounty;
         mint_for(bounty, bounty_allocation);
     }
     
-    //create contract for holding dev tokens and mint tokens for it. Also mint tokens for very early investors. Allowed only if crowdsale success
-    function init_dev_and_presale_allocation(address presale_token_address) onlyOwner
+    //mint tokens for dev. Also mint tokens for very early investors.
+    function init_dev_and_presale_allocation(address presale_token_address, address _prospectors_dev_allocation) onlyOwner
     {
-        if (address(0) != address(prospectors_dev_allocation) || locked == true) revert();
-        prospectors_dev_allocation = new ProspectorsDevAllocation(owner);
+        if (address(0) != prospectors_dev_allocation) revert();
+        prospectors_dev_allocation = _prospectors_dev_allocation;
         mint_for(prospectors_dev_allocation, dev_allocation);
         mint_for(presale_token_address, presale_allocation);
     }
@@ -156,10 +160,5 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
             Transfer(this, addr, amount);
         }
     }
-    
-    //this code will be excluded from main net, using only in testnet
-    function kill() onlyOwner
-    {
-        selfdestruct(owner);
-    }
 }
+
