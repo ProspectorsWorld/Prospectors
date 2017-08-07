@@ -7,19 +7,19 @@ import "lib/math.sol";
 contract ProspectorsCrowdsale is Owned, DSMath
 {
     ProspectorsGoldToken public token;
-    
-    uint public start_time; //crowdsale start time
-    uint public end_time; //crowdsale end time
-    uint public bonus_amount; //amount of tokens by bonus price
-    uint public start_amount; //tokens amount allocated for crowdsale
-    uint public price; //standart token price in ETH 
-    uint public bonus_price; //bonus token price in ETH
-    uint public total_raised; //crowdsale total funds raised
     address public dev_multisig; //multisignature wallet to collect funds
     
-    uint private constant goal = 2000 ether; //soft crowdsale cap. If not reached funds will be returned
+    uint public total_raised; //crowdsale total funds raised
+    uint public contributors_count = 0; //crowdsale total funds raised
+    
+    uint public constant start_time = 1502377200; //crowdsale start time - August 10, 15:00 UTC
+    uint public constant end_time = 1505055600; //crowdsale end time - Septempber 10, 15:00 UTC
+    uint public constant bonus_amount = 10000000 * 10**18; //amount of tokens by bonus price
+    uint public constant start_amount = 60000000 * 10**18; //tokens amount allocated for crowdsale
+    uint public constant price =  0.0005 * 10**18; //standart token price in ETH 
+    uint public constant bonus_price = 0.0004 * 10**18; //bonus token price in ETH
+    uint public constant goal = 2000 ether; //soft crowdsale cap. If not reached funds will be returned
     bool private closed = false; //can be true after end_time or when all tokens sold
-    address private address_for_not_saled_tokens; //this is non transfarable game address, all not sold tokens will be sent to it
     
     mapping(address => uint) funded; //needed to save amounts of ETH for refund
     
@@ -63,34 +63,22 @@ contract ProspectorsCrowdsale is Owned, DSMath
         return start_amount - bonus_amount;
     }
     
-    //prevent send 0 ETH
+    //prevent send less than 0.01 ETH
     modifier has_value
     {
-        if (msg.value <= 0) revert();
+        if (msg.value < 0.01 ether) revert();
         _;
     }
 
-    function ProspectorsCrowdsale(address _owner, address _dev_multisig, address _address_for_not_saled_tokens)
+    function init(address _token_address, address _dev_multisig) onlyOwner
     {
-        token = ProspectorsGoldToken(msg.sender);
-        address_for_not_saled_tokens = _address_for_not_saled_tokens;
-        owner = _owner;
+        if (address(0) != address(token)) revert();
+        token = ProspectorsGoldToken(_token_address);
         dev_multisig = _dev_multisig;
-    }
-
-    function init(uint256 _bonus_amount, uint256 _price, uint256 _bonus_price, uint _start_time, uint _end_time)
-    {
-        if (msg.sender != address(token) || _start_time < time() || _bonus_amount > my_token_balance()) revert();
-        bonus_amount = _bonus_amount;
-        bonus_price = _bonus_price;
-        price = _price;
-        start_time = _start_time;
-        end_time = _end_time;
-        start_amount = my_token_balance(); 
     }
     
     //main contribute function
-    function buy() in_time has_value private {
+    function participate() in_time has_value private {
         if (my_token_balance() == 0 || closed == true) revert();
 
         var remains = msg.value;
@@ -111,6 +99,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
         if (remains > 0) revert();
 
         total_raised = add(total_raised, msg.value);
+        if (funded[msg.sender] == 0) contributors_count++;
         funded[msg.sender] = add(funded[msg.sender], msg.value);
 
         token.transfer(msg.sender, buy_amount); //transfer tokens to participant
@@ -137,7 +126,7 @@ contract ProspectorsCrowdsale is Owned, DSMath
                 token.unlock(); //unlock token transfers
                 if (my_token_balance() > 0)
                 {
-                    token.transfer(address_for_not_saled_tokens, my_token_balance()); //move not saled tokens to game balance
+                    token.transfer(0xb1, my_token_balance()); //move not saled tokens to game balance
                 }
             }
         }
@@ -153,8 +142,9 @@ contract ProspectorsCrowdsale is Owned, DSMath
         dev_multisig.transfer(this.balance);
     }
 
-    function () payable external {
-        buy();
+    function () payable external 
+    {
+        participate();
     }
     
     //allows destroy this whithin 180 days after crowdsale ends
@@ -164,11 +154,5 @@ contract ProspectorsCrowdsale is Owned, DSMath
         {
             selfdestruct(dev_multisig);
         }
-    }
-
-    //this code will be excluded from mainnet, using only in testnet
-    function kill() onlyOwner
-    {
-        selfdestruct(dev_multisig);
     }
 }
