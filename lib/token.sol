@@ -144,10 +144,9 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
     }
     
     //this function will be called after game release
-    function clear_game_balance() onlyOwner
+    function migrate_game_balance() onlyOwner
     {
-        _supply = sub(_supply, _balances[game_address]);
-        _balances[game_address] = 0;
+        migrate_participant(game_address);
     }
     
     //adding tokens to crowdsale, bounty, game and prospectors team
@@ -161,4 +160,5 @@ contract ProspectorsGoldToken is TokenBase, Owned, Migrable {
         }
     }
 }
+
 
